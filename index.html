@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奶茶配方系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', '微软雅黑', sans-serif;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem;
+            position: relative;
+        }
+
+        h1::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: #3498db;
+            margin: 0.5rem auto;
+            border-radius: 2px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        #teaName {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        #teaName:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+            outline: none;
+        }
+
+        button {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        #result {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        #result.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .recipe-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .recipe-card h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .recipe-card p {
+            color: #666;
+            line-height: 1.6;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .recipe-card p::before {
+            content: "•";
+            color: #3498db;
+            position: absolute;
+            left: 0;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-mug-hot"></i> 奶茶配方系统</h1>
+        <div class="search-box">
+            <input type="text" id="teaName" placeholder="输入饮品名称（如：茉莉花茶）">
+            <button onclick="searchRecipe()"><i class="fas fa-search"></i> 立即查询</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 完整配方数据库
+        const recipes = {
+             // 茶汤系列
+            "茉莉花茶（1份）": "茶叶25g<br>开水625ml<br>降温冰块50g<br>不盖盖泡制8分钟<br>后冰375g",
+            "鸭屎香茶汤（2份）": "茶叶50g<br>开水1250ml<br>实盖泡制12分钟<br>后冰750g",
+            "金丝红玉茶汤（1份）": "茶叶60g<br>开水1500ml<br>虚盖泡制8分钟<br>后冰600g",
+            "白桃乌龙茶（1份）": "茶叶50g<br>开水1250ml<br>实盖泡制10分钟<br>后冰750g",
+
+            // 小料制作
+            "茶冻煮法": "水晶蒟蒻粉200g<br>开水1500ml<br>1800W火力煮1分钟<br>加绿茶茶汤1500ml+冰糖糖浆400ml<br>再次搅拌1分钟",
+            "仙草冻煮法": "仙草粉200g+兑粉开水400ml<br>冰沙机打制2分钟<br>加开水2000ml+冰糖糖浆100ml",
+            "波霸珍珠煮法（500g）": "珍珠500g<br>开水3000ml<br>煮25分钟搅拌5次<br>焖10分钟<br>冰糖糖浆=珍珠量×0.15g",
+            "西米煮法（100g）": "西米100g:水2000ml<br>2000W火力煮15分钟<br>焖5分钟<br>冰糖量=西米量×0.3ml",
+
+            // 牛乳茶系列
+            "白桃乌龙牛乳茶（500ml）": "冰糖25ml<br>纯牛乳60ml<br>厚乳20ml<br>白桃乌龙茶汤200ml<br>奶昔机打10-15秒<br>雪顶奶油3圈半+无花果碎0.5勺",
+            "幽兰茶拿铁（热）": "纯牛乳70ml<br>厚乳25ml<br>金丝红玉茶汤250ml<br>开水补满<br>加热至65℃",
+            "超级吨吨牛乳茶（1L）": "仙草冻2勺+茶冻2勺<br>西米1勺+珍珠1勺<br>纯牛乳80ml<br>厚乳35ml<br>金丝红玉茶汤200ml",
+
+            // 鲜果茶系列
+            "葡萄冰柠茶（700ml）": "葡萄果肉1勺<br>香柠薄片2片<br>冰块爆打15下<br>葡萄汁20ml<br>绿茶茶汤200ml<br>雪克15下",
+            "杨枝甘露（500ml）": "西米1.5勺+西柚粒1勺<br>芒果粒1勺+生椰乳50ml<br>芒果浆2勺<br>绿茶100ml<br>冰沙机打制",
+            "超级水果茶（1L）": "香柠薄片2片+脐橙薄片2片<br>西瓜碎3勺+芒果粒0.5勺<br>凤梨汁1勺+冰糖40ml<br>绿茶200ml<br>雪克8下",
+
+            // 咖啡系列
+            "生椰拿铁（冰）": "厚乳20ml<br>生椰乳150ml<br>冰块补满<br>咖啡液40g<br>分层出品",
+            "卡布奇诺（热）": "厚乳300ml<br>纯牛乳加热至60℃<br>咖啡液60g<br>打奶泡出品",
+            "美式咖啡（冰）": "冰水150ml<br>咖啡液60g<br>冰块补满",
+
+            // 酸奶系列
+            "莓莓手摇酸奶": "草莓果浆1勺<br>酸奶100ml<br>绿茶/鸭屎香茶底50ml<br>冰块补满<br>雪克15下",
+            "芒芒手摇酸奶": "芒果粒1勺+椰果1勺<br>酸奶100ml（挂壁）<br>芒果浆1勺<br>绿茶100ml<br>雪克15下",
+
+            // 其他
+            "蜂蜜柚子茶（700ml）": "蜂蜜柚子酱2勺<br>绿茶250ml<br>纯净水补满<br>雪克15下",
+            "金桔柠檬（1L）": "香柠薄片5片<br>鲜金桔2颗挤汁<br>冰糖20ml<br>纯净水500ml<br>雪克15下"
+        };
+
+        // 绑定Enter键事件
+        document.getElementById("teaName").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                searchRecipe();
+                event.preventDefault();
+            }
+        });
+
+        // 智能搜索功能
+        function searchRecipe() {
+            const input = document.getElementById('teaName').value.trim();
+            const resultDiv = document.getElementById('result');
+            const normalizedInput = input.toLowerCase();
+
+            if (!input) {
+                showResult("<div class='recipe-card'><h3><i class='fas fa-exclamation-circle'></i> 提示</h3><p>请输入有效的饮品名称</p></div>");
+                return;
+            }
+
+            // 模糊搜索逻辑
+            const foundRecipes = Object.entries(recipes)
+                .filter(([name]) => name.toLowerCase().includes(normalizedInput))
+                .map(([name, steps]) => ({ name, steps }));
+
+            if (foundRecipes.length > 0) {
+                const resultsHTML = foundRecipes.map(recipe => `
+                    <div class="recipe-card">
+                        <h3><i class="fas fa-blender"></i> ${recipe.name}</h3>
+                        <p>${recipe.steps.replace(/<br>/g, '</p><p>')}</p>
+                    </div>
+                `).join('');
+                showResult(resultsHTML);
+            } else {
+                showResult("<div class='recipe-card'><h3><i class='fas fa-exclamation-triangle'></i> 配方未找到</h3><p>建议：<br>1.检查名称拼写<br>2.笨 奶茶名字都能错 </p></div>");
+            }
+        }
+
+        // 显示结果
+        function showResult(content) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = content;
+            resultDiv.classList.add('show');
+            document.getElementById('teaName').focus();
+        }
+    </script>
+</body>
+</html>
